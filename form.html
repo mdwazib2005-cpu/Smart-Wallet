@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>স্মার্ট ওয়ালেট</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    :root { --bg: #f8fafc; --text: #0f172a; --card: #ffffff; --border: #e2e8f0; --accent: #6366f1; --accent-soft: rgba(99, 102, 241, 0.1); }
+    [data-theme="dark"] { --bg: #020617; --text: #f1f5f9; --card: #0f172a; --border: #1e293b; --accent: #818cf8; --accent-soft: rgba(129, 140, 248, 0.1); }
+    [data-theme="sakura"] { --bg: #fff1f2; --text: #881337; --card: #ffffff; --border: #fecdd3; --accent: #e11d48; --accent-soft: rgba(225, 29, 72, 0.1); }
+    [data-theme="emerald"] { --bg: #f0fdf4; --text: #064e3b; --card: #ffffff; --border: #bbf7d0; --accent: #059669; --accent-soft: rgba(5, 150, 105, 0.1); }
+
+    * { font-family: 'Hind Siliguri', sans-serif !important; }
+    .fa, .fas, .fa-solid { font-family: "Font Awesome 6 Free" !important; font-weight: 900 !important; }
+
+    body { background-color: var(--bg); color: var(--text); transition: all 0.4s ease; margin: 0; padding: 0; overflow-x: hidden; }
+    .premium-card { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; }
+    .premium-card:hover { transform: translateY(-6px); border-color: var(--accent); box-shadow: 0 15px 30px -10px rgba(0,0,0,0.1); }
+    .ticker-animate { animation: ticker 40s linear infinite; }
+    @keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+    .modal-slide-up { animation: modalSlide 0.4s ease-out forwards; }
+    @keyframes modalSlide { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+    .custom-scroll::-webkit-scrollbar { width: 4px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@19.0.0",
+      "react-dom/client": "https://esm.sh/react-dom@19.0.0/client"
+    }
+  }
+  </script>
+</head>
+<body data-theme="light">
+  <div id="root"></div>
+
+  <script type="module">
+    import React, { useState, useEffect, useMemo, useRef } from 'react';
+    import ReactDOM from 'react-dom/client';
+
+    // --- Components ---
+
+    const DashboardCard = ({ label, amount, icon, iconBg, iconColor, onClick }) => (
+      <div onClick={onClick} className="bg-[var(--card)] px-3 py-5 rounded-[25px] text-center border-2 border-[var(--border)] shadow-sm premium-card group theme-transition">
+        <div className={`w-11 h-11 rounded-2xl ${iconBg} ${iconColor} flex items-center justify-center mx-auto mb-2 shadow-sm group-hover:scale-110 transition-transform`}>
+          <i className={`fa-solid ${icon} text-lg`}></i>
+        </div>
+        <span className="text-[10px] font-bold text-slate-400 block mb-1 uppercase tracking-wider">{label}</span>
+        <p className="text-base font-black">৳ {amount.toLocaleString('bn-BD')}</p>
+      </div>
+    );
+
+    const TabItem = ({ active, icon, label, onClick }) => (
+      <button onClick={onClick} className={`flex flex-col items-center gap-1.5 p-4 rounded-[28px] border-2 font-black text-[12px] transition-all ${active ? 'bg-[var(--accent)] text-white border-[var(--accent)] shadow-lg scale-105' : 'bg-[var(--card)] text-slate-400 border-[var(--border)]'}`}>
+        <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${active ? 'bg-white/20' : 'bg-slate-50'}`}><i className={`fa-solid ${icon} text-lg`}></i></div>
+        {label}
+      </button>
+    );
+
+    const TransactionRow = ({ t, onDelete, onEdit, onClick }) => (
+      <div onClick={onClick} className="relative flex items-center justify-between p-4 bg-[var(--card)] rounded-[22px] border border-[var(--border)] hover:border-[var(--accent)] transition-all group cursor-pointer shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.type==='Income'?'bg-emerald-100 text-emerald-600':t.type==='Transfer'?'bg-sky-100 text-sky-600':'bg-rose-100 text-rose-600'}`}>
+            <i className={`fa-solid ${t.type==='Income'?'fa-arrow-down':t.type==='Transfer'?'fa-repeat':'fa-arrow-up'}`}></i>
+          </div>
+          <div className="overflow-hidden">
+            <p className="text-[12px] font-bold truncate max-w-[140px]">{t.description}</p>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">{t.date} • {t.account}</p>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <p className={`text-[12px] font-black ${t.type==='Income'?'text-emerald-600':t.type==='Transfer'?'text-sky-500':'text-rose-600'}`}>
+            {t.type==='Income'?'+':t.type==='Expense'?'-':''}৳{t.amount.toLocaleString('bn-BD')}
+          </p>
+          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            {onEdit && <button onClick={(e)=>{e.stopPropagation(); onEdit(t);}} className="text-indigo-400"><i className="fa-solid fa-pen-to-square"></i></button>}
+            {onDelete && <button onClick={(e)=>{e.stopPropagation(); onDelete(t.id);}} className="text-rose-400"><i className="fa-solid fa-trash-can"></i></button>}
+          </div>
+        </div>
+      </div>
+    );
+
+    const Watermark = () => (
+      <div className="mt-16 mb-8 text-center select-none opacity-10">
+        <p className="text-[20px] font-black tracking-[1.2em]">MAHIM</p>
+      </div>
+    );
+
+    const App = () => {
+      const [theme, setTheme] = useState('light');
+      const [transactions, setTransactions] = useState([]);
+      const [mode, setMode] = useState('Self');
+      const [editingId, setEditingId] = useState(null);
+      const [formData, setFormData] = useState({
+        date: new Date().toISOString().split('T')[0],
+        account: 'বিকাশ ১', toAccount: 'বিকাশ ২', amount: '', description: '', person: '',
+        type: 'Expense', ledgerType: 'Lending', action: 'ধার দেওয়া'
+      });
+
+      const [showHistory, setShowHistory] = useState(false);
+      const [selectedTx, setSelectedTx] = useState(null);
+      const [selectedPerson, setSelectedPerson] = useState(null);
+      
+      const statementRef = useRef(null);
+      const receiptRef = useRef(null);
+
+      useEffect(() => {
+        if (typeof google !== 'undefined') {
+          google.script.run.withSuccessHandler(res => {
+            setTransactions(JSON.parse(res));
+          }).getTransactions();
+        } else {
+          const saved = localStorage.getItem('smart_wallet_full_v5');
+          if (saved) setTransactions(JSON.parse(saved));
+        }
+      }, []);
+
+      useEffect(() => {
+        localStorage.setItem('smart_wallet_full_v5', JSON.stringify(transactions));
+        document.body.parentElement.setAttribute('data-theme', theme);
+      }, [transactions, theme]);
+
+      const stats = useMemo(() => {
+        let b1 = 0, b2 = 0, bank = 0, cash = 0, rec = 0, pay = 0;
+        const pMap = {};
+        transactions.forEach(t => {
+          const amt = t.amount;
+          const up = (acc, v) => {
+            if (acc === 'বিকাশ ১') b1 += v; else if (acc === 'বিকাশ ২') b2 += v;
+            else if (acc === 'ব্যাংক') bank += v; else if (acc === 'ক্যাশ') cash += v;
+          };
+          if (t.category === 'Self') up(t.account, t.type === 'Income' ? amt : -amt);
+          else if (t.category === 'Transfer') { up(t.account, -amt); if(t.toAccount) up(t.toAccount, amt); }
+          else {
+            const p = t.person || 'Unknown'; if (!pMap[p]) pMap[p] = { Lending: 0, Borrowing: 0 };
+            if (t.category === 'Lending') { const v = t.action==='ধার দেওয়া'?amt:-amt; pMap[p].Lending += v; up(t.account, -v); }
+            else { const v = t.action==='ধার নেওয়া'?amt:-amt; pMap[p].Borrowing += v; up(t.account, v); }
+          }
+        });
+        const pList = [];
+        Object.entries(pMap).forEach(([n, v]) => {
+          if (v.Lending !== 0) { pList.push({ name: n, amount: v.Lending, type: 'Lending' }); rec += v.Lending; }
+          if (v.Borrowing !== 0) { pList.push({ name: n, amount: v.Borrowing, type: 'Borrowing' }); pay += v.Borrowing; }
+        });
+        return { total: b1+b2+bank+cash, b1, b2, bank, cash, receivable: rec, payable: pay, personList: pList, recent: [...transactions].reverse().slice(0, 15) };
+      }, [transactions]);
+
+      const handleSave = () => {
+        if (!formData.amount || formData.amount <= 0) return Swal.fire('ভুল!', 'টাকার পরিমাণ দিন', 'error');
+        if (mode === 'Ledger' && !formData.person) return Swal.fire('ভুল!', 'ব্যক্তির নাম দিন', 'error');
+
+        const newTx = {
+          id: editingId || Date.now().toString(),
+          date: formData.date,
+          category: mode === 'Ledger' ? formData.ledgerType : mode,
+          account: formData.account,
+          toAccount: mode === 'Transfer' ? formData.toAccount : undefined,
+          description: mode === 'Ledger' ? `${formData.person} (${formData.action})` : (formData.description || 'বিবরণ নেই'),
+          amount: parseFloat(formData.amount),
+          type: mode === 'Transfer' ? 'Transfer' : (mode === 'Ledger' ? (formData.action.includes('দেওয়া') || formData.action.includes('শোধ') ? 'Expense' : 'Income') : formData.type),
+          person: mode === 'Ledger' ? formData.person : undefined,
+          action: mode === 'Ledger' ? formData.action : undefined
+        };
+
+        if (editingId) setTransactions(prev => prev.map(tx => tx.id === editingId ? newTx : tx));
+        else setTransactions(prev => [...prev, newTx]);
+
+        if (typeof google !== 'undefined') google.script.run.saveData(JSON.stringify(newTx));
+
+        setFormData({ ...formData, amount: '', description: '', person: '' });
+        setEditingId(null);
+        Swal.fire({ icon: 'success', title: 'সেভ হয়েছে!', timer: 800, showConfirmButton: false });
+      };
+
+      const downloadImg = (ref, name) => {
+        html2canvas(ref.current, { scale: 2 }).then(canvas => {
+          const link = document.createElement('a');
+          link.download = `${name}.png`;
+          link.href = canvas.toDataURL();
+          link.click();
+        });
+      };
+
+      return (
+        <div className="max-w-5xl mx-auto p-4 md:p-8 space-y-8 pb-24">
+          <nav className="flex justify-between items-center py-2">
+            <h1 className="text-2xl font-black text-[var(--accent)] flex items-center gap-2"><i className="fa-solid fa-wallet"></i> স্মার্ট ওয়ালেট</h1>
+            <div className="flex gap-2 bg-[var(--card)] p-1.5 rounded-full border shadow-sm">
+              {['light', 'dark', 'sakura', 'emerald'].map(t => (
+                <button key={t} onClick={() => setTheme(t)} className={`w-6 h-6 rounded-full border-2 ${theme === t ? 'ring-2 ring-indigo-400' : ''} ${t==='light'?'bg-slate-200':t==='dark'?'bg-slate-900':t==='sakura'?'bg-rose-400':'bg-emerald-500'}`}></button>
+              ))}
+            </div>
+          </nav>
+
+          <div className="bg-[var(--accent)] p-8 rounded-[35px] text-white shadow-xl relative overflow-hidden theme-transition">
+            <span className="text-xs font-bold opacity-70 uppercase tracking-widest">মোট নগদ ব্যালেন্স</span>
+            <h2 className="text-5xl font-black mt-2 tracking-tighter">৳ {stats.total.toLocaleString('bn-BD')}</h2>
+            <div className="absolute top-[-20px] right-[-20px] w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <DashboardCard label="বিকাশ ১" amount={stats.b1} icon="fa-dove" iconBg="bg-rose-50" iconColor="text-rose-500" />
+            <DashboardCard label="বিকাশ ২" amount={stats.b2} icon="fa-dove" iconBg="bg-rose-50" iconColor="text-rose-500" />
+            <DashboardCard label="পাওনা" amount={stats.receivable} icon="fa-handshake" iconBg="bg-emerald-50" iconColor="text-emerald-500" />
+            <DashboardCard label="ব্যাংক" amount={stats.bank} icon="fa-building-columns" iconBg="bg-sky-50" iconColor="text-sky-500" />
+            <DashboardCard label="ক্যাশ" amount={stats.cash} icon="fa-money-bill-wave" iconBg="bg-emerald-50" iconColor="text-emerald-500" />
+            <DashboardCard label="দেনা" amount={stats.payable} icon="fa-hourglass-start" iconBg="bg-rose-50" iconColor="text-rose-500" />
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <TabItem active={mode === 'Self'} icon="fa-user-check" label="ব্যক্তিগত" onClick={() => setMode('Self')} />
+            <TabItem active={mode === 'Transfer'} icon="fa-repeat" label="ট্রান্সফার" onClick={() => setMode('Transfer')} />
+            <TabItem active={mode === 'Ledger'} icon="fa-handshake" label="দেনা-পাওনা" onClick={() => setMode('Ledger')} />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 bg-[var(--card)] p-8 rounded-[40px] border shadow-xl space-y-6">
+              <div className="flex justify-between items-center"><h3 className="font-black text-[10px] uppercase text-slate-400">নতুন এন্ট্রি</h3><button onClick={()=>setShowHistory(true)} className="text-[10px] font-black text-[var(--accent)] bg-[var(--accent-soft)] px-4 py-2 rounded-xl">স্টেটমেন্ট</button></div>
+              <div className="space-y-4">
+                {mode === 'Ledger' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase">ব্যক্তির নাম</label><input type="text" value={formData.person} onChange={e=>setFormData({...formData, person:e.target.value})} className="w-full p-4 bg-slate-50 border rounded-2xl outline-none font-bold text-sm" placeholder="নাম..." /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase">অ্যাকশন</label><select value={formData.action} onChange={e=>setFormData({...formData, action:e.target.value})} className="w-full p-4 bg-slate-50 border rounded-2xl outline-none text-xs font-bold"><option>ধার দেওয়া</option><option>ফেরত পাওয়া</option><option>ধার নেওয়া</option><option>ধার শোধ</option></select></div>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase">তারিখ</label><input type="date" value={formData.date} onChange={e=>setFormData({...formData, date:e.target.value})} className="w-full p-4 bg-slate-50 border rounded-2xl outline-none text-xs font-bold" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase">{mode==='Transfer'?'কোথা থেকে':'অ্যাকাউন্ট'}</label><select value={formData.account} onChange={e=>setFormData({...formData, account:e.target.value})} className="w-full p-4 bg-slate-50 border rounded-2xl outline-none text-xs font-bold"><option>বিকাশ ১</option><option>বিকাশ ২</option><option>ব্যাংক</option><option>ক্যাশ</option></select></div>
+                </div>
+                {mode === 'Transfer' && (
+                  <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase">কোথায়</label><select value={formData.toAccount} onChange={e=>setFormData({...formData, toAccount:e.target.value})} className="w-full p-4 bg-slate-50 border rounded-2xl outline-none text-xs font-bold"><option>বিকাশ ১</option><option>বিকাশ ২</option><option>ব্যাংক</option><option>ক্যাশ</option></select></div>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase">পরিমাণ</label><input type="number" value={formData.amount} onChange={e=>setFormData({...formData, amount:e.target.value})} className="w-full p-4 bg-slate-50 border rounded-2xl outline-none font-black text-2xl text-[var(--accent)]" placeholder="0" /></div>
+                  {mode === 'Self' && <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase">ধরণ</label><select value={formData.type} onChange={e=>setFormData({...formData, type:e.target.value})} className="w-full p-4 bg-slate-50 border rounded-2xl outline-none text-xs font-bold"><option value="Expense">ব্যয় (-)</option><option value="Income">আয় (+)</option></select></div>}
+                </div>
+                <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase">বিবরণ</label><input type="text" value={formData.description} onChange={e=>setFormData({...formData, description:e.target.value})} className="w-full p-4 bg-slate-50 border rounded-2xl outline-none font-bold text-sm" placeholder="বিস্তারিত বিবরণ..." /></div>
+                <button onClick={handleSave} className="w-full py-5 bg-[var(--accent)] text-white rounded-[25px] font-black shadow-xl active:scale-95 transition-all mt-4">{editingId ? 'আপডেট করুন' : 'সেভ করুন'}</button>
+              </div>
+            </div>
+            <div className="bg-[var(--card)] p-6 rounded-[40px] border shadow-xl flex flex-col h-[580px]">
+              <h3 className="font-bold text-[10px] uppercase text-slate-400 mb-6">সাম্প্রতিক লেনদেন</h3>
+              <div className="flex-1 overflow-y-auto space-y-4 custom-scroll pr-2">
+                {stats.recent.map(t => <TransactionRow key={t.id} t={t} onClick={()=>setSelectedTx(t)} />)}
+              </div>
+            </div>
+          </div>
+
+          <footer className="fixed bottom-0 left-0 w-full bg-slate-950 text-sky-400 py-4 overflow-hidden border-t-2 border-[var(--accent)] z-50">
+            <div className="ticker-animate whitespace-nowrap px-10 font-black text-[12px] uppercase tracking-widest">
+               স্মার্ট ওয়ালেট প্রোপার্টি • {stats.personList.map(p=>`${p.name}: ${p.amount}৳`).join(' | ') || 'সব হিসাব ক্লিয়ার আছে'}
+            </div>
+          </footer>
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

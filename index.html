@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>স্মার্ট ওয়ালেট</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Stable Font Awesome 6.6.0 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --text: #0f172a;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --accent: #6366f1;
+      --accent-soft: rgba(99, 102, 241, 0.1);
+    }
+
+    [data-theme="dark"] {
+      --bg: #020617;
+      --text: #f1f5f9;
+      --card: #0f172a;
+      --border: #1e293b;
+      --accent: #818cf8;
+      --accent-soft: rgba(129, 140, 248, 0.1);
+    }
+
+    [data-theme="sakura"] {
+      --bg: #fff1f2;
+      --text: #881337;
+      --card: #ffffff;
+      --border: #fecdd3;
+      --accent: #e11d48;
+      --accent-soft: rgba(225, 29, 72, 0.1);
+    }
+
+    [data-theme="emerald"] {
+      --bg: #f0fdf4;
+      --text: #064e3b;
+      --card: #ffffff;
+      --border: #bbf7d0;
+      --accent: #059669;
+      --accent-soft: rgba(5, 150, 105, 0.1);
+    }
+
+    /* Force Hind Siliguri globally */
+    * {
+      font-family: 'Hind Siliguri', sans-serif !important;
+    }
+
+    /* Protect Font Awesome icons from being forced into Siliguri font */
+    .fa, .fas, .fa-solid, .fa-regular, .fa-brands {
+      font-family: "Font Awesome 6 Free" !important;
+      font-weight: 900 !important;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      transition: background-color 0.4s ease, color 0.4s ease;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    .ticker-animate {
+      animation: ticker 40s linear infinite;
+    }
+    @keyframes ticker {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+    
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+    
+    .custom-scroll {
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--accent) transparent;
+    }
+
+    .copy-checkmark-anim {
+      animation: checkFade 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    @keyframes checkFade {
+      0% { opacity: 0; transform: scale(0.5); }
+      30% { opacity: 1; transform: scale(1.1); }
+      70% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0.9); }
+    }
+
+    .modal-slide-up {
+      animation: modalSlide 0.4s cubic-bezier(0, 0, 0.2, 1) forwards;
+    }
+    @keyframes modalSlide {
+      from { opacity: 0; transform: translateY(40px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Premium Card Transition */
+    .premium-card {
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .premium-card:hover {
+      transform: translateY(-6px) scale(1.02);
+      box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.15);
+      border-color: var(--accent);
+    }
+    .premium-card:active {
+      transform: scale(0.97);
+    }
+
+    @keyframes softPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.8; }
+    }
+    .loading-pulse {
+      animation: softPulse 2s ease-in-out infinite;
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "react/": "https://esm.sh/react@^19.2.4/",
+      "react": "https://esm.sh/react@^19.2.4",
+      "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+      "@google/genai": "https://esm.sh/@google/genai@^1.42.0"
+    }
+  }
+  </script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body data-theme="light">
+  <div id="root"></div>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>

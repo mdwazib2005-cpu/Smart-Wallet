@@ -1,0 +1,9 @@
+{
+  "name": "Copy of Smart Wallet Pro",
+  "description": "A high-end personal finance and ledger management system with Bengali language support and AI-powered insights.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": []
+}
