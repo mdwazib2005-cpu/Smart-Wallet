@@ -1,8 +1,17 @@
 
-export type AccountType = 'বিকাশ ১' | 'বিকাশ ২' | 'ব্যাংক' | 'ক্যাশ';
-// Added 'Self' to TransactionType to fix comparison errors in App.tsx as it is used as a category value
+export type AccountType = string;
 export type TransactionType = 'Self' | 'Income' | 'Expense' | 'Transfer' | 'Lending' | 'Borrowing';
 export type EntryMode = 'Self' | 'Transfer' | 'Ledger';
+
+export interface WalletAccount {
+  id: string;
+  name: string;
+  icon: string;
+  iconBg: string;
+  iconColor: string;
+  borderColor?: string;
+  isDefault?: boolean;
+}
 
 export interface Transaction {
   id: string;
@@ -32,6 +41,7 @@ export interface WalletStats {
   bikash2: number;
   bank: number;
   cash: number;
+  accountBalances: Record<string, number>;
   recentTrans: Transaction[];
   personList: PersonRecord[];
 }
